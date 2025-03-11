@@ -20,6 +20,12 @@ const errorhandler = (err, req, res, next) => {
       message: `Invalid ${err.path}: ${err.value}`,
     });
   }
+  if (err.name === "JsonWebTokenError") {
+    return res.status(401).json({ status: "failure", message: "Unauthorized" });
+  }
+  if (err.name === "TokenExpiredError") {
+    return res.status(401).json({ status: "failure", message: "Token expired" });
+  }
 
   // Handle Mongoose DuplicateKeyError (e.g., duplicate email)
   if (err.code === 11000) {

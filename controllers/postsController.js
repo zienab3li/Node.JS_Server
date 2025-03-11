@@ -13,13 +13,29 @@ const createPost = async (req, res, next) => {
 };
 
 // Get all posts
-const getPosts = async (req, res, next) => {
-  try {
-    const posts = await Post.find().populate("userId", "name email"); // Populate user details
-    res.status(200).json({ status: "success", data: { posts } });
-  } catch (error) {
-    next(error);
+const getPosts = async (req, res) => {
+  const limit = Number(req.query.limit) || 10;
+  const page = Number(req.query.page) || 1;
+
+  const postsCount = await Post.countDocuments();
+  const numberOfPages = Math.ceil(postsCount / limit);
+
+  const posts = await Post.find()
+    .skip((page - 1) * limit) // get posts for the current page
+    .limit(limit);
+  if (!posts?.length) {
+    throw new APIError("No posts found", 404);
   }
+
+  const pagination = {
+    page,
+    numberOfPages,
+    total: postsCount,
+    next: page < numberOfPages,
+    prev: page > 1,
+  };
+
+  res.status(200).json({ posts, pagination });
 };
 
 // Get a single post by ID

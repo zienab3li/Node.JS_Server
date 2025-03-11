@@ -1,9 +1,10 @@
 const express = require("express");
-const router = express.Router();
+const auth = require("./../middlewares/auth");
 const postsController = require("../controllers/postsController");
+const router = express.Router();
 
 // POST /posts
-router.post("/", postsController.createPost);
+router.post("/", auth,postsController.createPost);
 
 // GET /posts
 router.get("/", postsController.getPosts);

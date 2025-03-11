@@ -1,14 +1,60 @@
 const APIError = require("../util/APIError");
 const User = require("../models/users");
+const bcrypt = require("bcrypt");
+const util = require("util");
+const jwt = require("jsonwebtoken");
 
-const createUser = async (req, res, next) => {
-  try {
-    const data = req.body;
-    const user = await User.create({ ...data, role: "user" });
-    res.status(201).json({ status: "success", data: { user } });
-  } catch (error) {
-    next(error);
+const jwtSign = util.promisify(jwt.sign);
+
+const signup = async (req, res, next) => {
+  const data = req.body;
+  
+  if (!data.password || !data.passwordConfirm) {
+    throw new APIError("password and passwordConfirm are required", 400);
   }
+ 
+  if (data.password !== data.passwordConfirm) {
+    throw new APIError("password and passwordConfirm must be the same", 400);
+  }
+ 
+  const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS);
+  const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
+
+  
+  const newUser = await User.create({
+    ...data,
+    role: "user",
+    password: hashedPassword,
+  });
+
+  res.status(201).json({ status: "success", data: { user: newUser } });
+};
+
+const login = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw new APIError("email and password are required", 400);
+  }
+
+ 
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new APIError("Invalid Email or Password", 400);
+  }
+
+  
+  const isMatched = await bcrypt.compare(password, user.password);
+  if (!isMatched) {
+    throw new APIError("Invalid Email or Password", 400);
+  }
+  const JWT_SECRET = process.env.JWT_SECRET;
+  const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
+  const token = await jwtSign({ userId: user._id }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
+
+  res.status(200).json({ status: "success", data: { token } });
 };
 
 const getUsers = async (req, res) => {
@@ -61,7 +107,8 @@ const deleteUserById = async (req, res) => {
 };
 
 module.exports = {
-  createUser,
+  signup,
+  login,
   getUsers,
   getUserById,
   updateUserById,

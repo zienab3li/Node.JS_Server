@@ -4,6 +4,11 @@ const morgan = require("morgan");
 const dotenv=require("dotenv")
 const cors = require("cors");
 require("express-async-errors"); // Handles async errors
+const helmet = require("helmet");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
+const hpp = require("hpp");
+const limiter = require("./middlewares/rate-limiter");
 dotenv.config();
 const postsRoutes = require("./routes/postssRoutes"); // Ensure this path is correct
 const userRoutes = require("./routes/users");
@@ -15,7 +20,12 @@ const app = express();
 app.use(express.json()); // Parse JSON request bodies
 app.use(morgan("dev")); // Log HTTP requests
 app.use(cors()); // Enable CORS
-app.use(postsRoutes);
+app.use(helmet());
+app.use(mongoSanitize());
+app.use(xss());
+app.use(hpp());
+app.use(limiter);
+
 
 // ROUTES
 const V1_PREFIX = "/api/v1";
